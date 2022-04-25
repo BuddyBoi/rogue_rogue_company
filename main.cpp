@@ -27,16 +27,6 @@ namespace variables
 	int ScreenBottom = NULL;
 	float ScreenCenterX = ScreenWidth / 2;
 	float ScreenCenterY = ScreenHeight / 2;
-	DWORD_PTR game_instance = NULL;
-	DWORD_PTR u_world = NULL;
-	DWORD_PTR local_player_pawn = NULL;
-	DWORD_PTR local_player_array = NULL;
-	DWORD_PTR local_player = NULL;
-	DWORD_PTR local_player_root = NULL;
-	DWORD_PTR local_player_controller = NULL;
-	DWORD_PTR local_player_state = NULL;
-	DWORD_PTR persistent_level = NULL;
-	DWORD_PTR actors = NULL;
 }
 namespace offsets
 {
@@ -201,21 +191,16 @@ namespace game
 		}
 		mouse_event( MOUSEEVENTF_MOVE, static_cast<DWORD>(target_x), static_cast<DWORD>(target_y), 0, 0 );
 	}
-	auto characterbase()
+	/*auto characterbase()
 	{
 		auto m_Charatermovement = driver::read<uint64_t>( variables::local_player_pawn + offsets::CharacterMovement );
 		return driver::read<uint64_t>( m_Charatermovement + offsets::KSCharacterOwner );
-	}
-	auto weaponasset()
-	{
-		auto ActiveWeapon = driver::read<uint64_t>( variables::local_player_pawn + offsets::ActiveWeaponComponent );
-		return driver::read<uint64_t>( ActiveWeapon + offsets::WeaponAsset );
 	}
 	auto MeleeWeaponAsset()
 	{
 		uint64_t CurrentQuickMeleeWeapon = driver::read<uint64_t>( variables::local_player_pawn + offsets::CurrentQuickMeleeWeapon );
 		return driver::read<uint64_t>( CurrentQuickMeleeWeapon + offsets::MeleeWeaponAsset );
-	}
+	}*/
 
 	typedef struct _EntityList
 	{
@@ -231,13 +216,13 @@ namespace game
 
 	bool b_setup()
 	{
-		while ( !FindWindowA( window_class.c_str(), window_title.c_str() ) )
+		while ( !FindWindowA( NULL, window_title.c_str() ) )
 		{
 			Sleep( 5000 );
 			lg( "waiting for g" );
 		}
 
-		HWND t_hwnd = LI_FN( FindWindowA ).forwarded_safe_cached()(window_class.c_str(), window_title.c_str());
+		HWND t_hwnd = LI_FN( FindWindowA ).forwarded_safe_cached()(NULL, window_title.c_str());
 		if ( !t_hwnd )
 			return false;
 
@@ -258,102 +243,90 @@ namespace game
 		return true;
 	}
 
-	void no_spread()
-	{
-		//force accuracy
-		float current_float = driver::read<float>( weaponasset() + offsets::NoSpread );
-		if ( current_float > 100.0f || current_float < 0.0f )
-			return;
-
-		if(current_float < 100.0f && current_float >= 0.0f )
-			driver::write<float>( weaponasset() + offsets::NoSpread, 100.0f );
-	}
-
 	void cheat_loop()
 	{
-		while ( LI_FN(FindWindowA).forwarded_safe_cached()(window_class.c_str(), window_title.c_str()) )
+		while ( FindWindowA(NULL, window_title.c_str()) )
 		{
 			std::this_thread::sleep_for( std::chrono::milliseconds( 250 ) );
-
-			lg( "in loop" );
 
 			//update cache
 			std::vector<EntityList> tmpList;
 
+			lg( "in loop" );
+
 			//get main variables
-			variables::u_world = driver::read<DWORD_PTR>( variables::dwProcess_Base + offsets::offset_u_world );
-			if ( !variables::u_world )
+			DWORD_PTR u_world = driver::read<DWORD_PTR>( variables::dwProcess_Base + offsets::offset_u_world );
+			if ( !u_world )
 				continue;
-
-			variables::game_instance = driver::read<DWORD_PTR>( variables::u_world + offsets::offset_game_instance );
-			if ( !variables::game_instance )
+			DWORD_PTR game_instance = driver::read<DWORD_PTR>( u_world + offsets::offset_game_instance );
+			if ( !game_instance )
 				continue;
-
-			variables::persistent_level = driver::read<DWORD_PTR>( variables::u_world + offsets::offset_persistent_level );
-			if ( !variables::persistent_level )
+			DWORD_PTR local_player_array = driver::read<DWORD_PTR>( game_instance + offsets::offset_local_players_array );
+			if ( !local_player_array )
 				continue;
-
-			variables::actors = driver::read<DWORD_PTR>( variables::persistent_level + offsets::offset_actor_array );
-			if ( !variables::actors )
+			DWORD_PTR local_player = driver::read<DWORD_PTR>( local_player_array );
+			if ( !local_player )
 				continue;
-
-			variables::actor_count = driver::read<int>( variables::persistent_level + offsets::offset_actor_count );
-			if ( !variables::actor_count )
+			DWORD_PTR local_player_controller = driver::read<DWORD_PTR>( local_player + offsets::offset_player_controller );
+			if ( !local_player_controller )
 				continue;
-
-			variables::local_player_array = driver::read<DWORD_PTR>( variables::game_instance + offsets::offset_local_players_array );
-			if ( !variables::local_player_array )
+			DWORD_PTR local_player_pawn = driver::read<DWORD_PTR>( local_player_controller + offsets::offset_apawn );
+			if ( !local_player_pawn )
 				continue;
-
-			variables::local_player = driver::read<DWORD_PTR>( variables::local_player_array );
-			if ( !variables::local_player )
+			DWORD_PTR local_player_root = driver::read<DWORD_PTR>( local_player_pawn + offsets::offset_root_component );
+			if ( !local_player_root )
 				continue;
-
-			variables::local_player_controller = driver::read<DWORD_PTR>( variables::local_player + offsets::offset_player_controller );
-			if ( !variables::local_player_controller )
+			DWORD_PTR local_player_state = driver::read<DWORD_PTR>( local_player_pawn + offsets::offset_player_state );
+			if ( !local_player_state )
 				continue;
-
-			variables::local_player_pawn = driver::read<DWORD_PTR>( variables::local_player_controller + offsets::offset_apawn );
-			if ( !variables::local_player_pawn )
+			DWORD_PTR persistent_level = driver::read<DWORD_PTR>( u_world + offsets::offset_persistent_level );
+			if ( !persistent_level )
 				continue;
-
-			variables::local_player_root = driver::read<DWORD_PTR>( variables::local_player_pawn + offsets::offset_root_component );
-			if ( !variables::local_player_root )
+			DWORD_PTR actors = driver::read<DWORD_PTR>( persistent_level + offsets::offset_actor_array );
+			if ( !actors )
 				continue;
-
-			variables::local_player_state = driver::read<DWORD_PTR>( variables::local_player_pawn + offsets::offset_player_state );
-			if ( !variables::local_player_state )
+			DWORD_PTR actor_count = driver::read<int>( persistent_level + offsets::offset_actor_count );
+			if ( !actor_count )
 				continue;
 
 			//get local player info
-			float local_health = driver::read<float>( variables::local_player_pawn + offsets::offset_health );
-			float local_health_max = driver::read<float>( variables::local_player_pawn + offsets::offset_max_health );
-
+			float local_health = driver::read<float>( local_player_pawn + offsets::offset_health );
+			float local_health_max = driver::read<float>( local_player_pawn + offsets::offset_max_health );
 			if ( local_health < 1 )
-			{
-				lg( "you are not alive" );
 				continue;
-			}
 
-			lg( "player health : " + std::to_string( local_health ) );
-			lg( "player health max : " + std::to_string( local_health_max ) );
+			uint64_t ActiveWeapon = driver::read<uint64_t>( local_player_pawn + offsets::ActiveWeaponComponent );
+			if ( !ActiveWeapon )
+				continue;
 
-			no_spread();
-			
+			uint64_t weaponAsset = driver::read<uint64_t>( ActiveWeapon + offsets::WeaponAsset );
+			if ( !weaponAsset )
+				continue;
+
+			//nospread
+			float current_float = driver::read<float>( weaponAsset + offsets::NoSpread );
+			if ( current_float < 100.0f && current_float >= 0.0f )
+				driver::write<float>( weaponAsset + offsets::NoSpread, 100.0f );
+
+			//no-recoil
+			driver::write<bool>( local_player_controller + offsets::offset_bKickbackEnabled, false );
+
+
 			//update entitylist
 			for ( int index = 0; index < variables::actor_count; ++index )
 			{
-				auto actor_pawn = driver::read<DWORD_PTR>( variables::actors + index * 0x8 );
+				auto actor_pawn = driver::read<DWORD_PTR>( actors + index * 0x8 );
 				if ( actor_pawn == 0x00 )
 					continue;
 
 				//skip localplayer
-				if ( actor_pawn == variables::local_player_pawn )
+				if ( actor_pawn == local_player_pawn )
 					continue;
 
 				auto actor_id = driver::read<int>( actor_pawn + offsets::offset_actor_id );
 				auto actor_state = driver::read<DWORD_PTR>( actor_pawn + offsets::offset_player_state );
 				auto actor_mesh = driver::read<DWORD_PTR>( actor_pawn + offsets::offset_actor_mesh );
+
 				EntityList Entity{ };
 				Entity.actor_pawn = actor_pawn;
 				Entity.actor_id = actor_id;
@@ -385,9 +358,6 @@ namespace game
 				}
 			}
 			entityList = tmpList;
-
-			//localplayer features
-			no_spread();
 		}
 		lg( "game over?" );
 	}
