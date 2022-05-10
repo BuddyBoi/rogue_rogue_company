@@ -231,9 +231,9 @@ namespace game
 		CloseWindow( t_hwnd );
 		if ( !temp_pid )
 			return false;
-
-		driver::process_id = temp_pid;
-		variables::dwProcess_Base = driver::get_base_address( driver::process_id );
+		
+		driver::attach_process( variables::dwProcessId );
+		variables::dwProcess_Base = driver::get_base_address();
 		if ( !variables::dwProcess_Base )
 		{
 			std::cout << "can't find base address" << std::endl;
@@ -294,6 +294,8 @@ namespace game
 			float local_health_max = driver::read<float>( local_player_pawn + offsets::offset_max_health );
 			if ( local_health < 1 )
 				continue;
+
+			lg( "health: " + std::to_string( local_health ) );
 
 			uint64_t ActiveWeapon = driver::read<uint64_t>( local_player_pawn + offsets::ActiveWeaponComponent );
 			if ( !ActiveWeapon )
